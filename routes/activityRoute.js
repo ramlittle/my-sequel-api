@@ -9,10 +9,12 @@ const {
     permanentDeleteActivity,
     deleteActivity,
     readActivityByEmployeeId,
-    readRawActivityByEmployeeId
+    readRawActivityByEmployeeId,
+    readAllDeletedActivities
 } = require('../controllers/activityController');
 
 router.get('/', readAllActivities);
+router.get('/deleted/activities',readAllDeletedActivities)
 router.post('/create/', createActivity);
 
 router.get('/:activity_id', readActivity);

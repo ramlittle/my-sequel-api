@@ -1,5 +1,5 @@
 const { Activity } = require('../db.js');
-const {Sequelize}=require('@sequelize/core') 
+const {Sequelize, Op}=require('@sequelize/core') 
 // CREATE YOUR CRUD HERE
 
 const createActivity = async (request, response) => {
@@ -13,7 +13,16 @@ const createActivity = async (request, response) => {
 
 const readAllActivities = async (request, response) => {
     try {
-        const results = await Activity.findAll()
+        const results = await Activity.findAll({paranoid:true})
+        response.status(200).json({ message: "showing all Activity success", results });
+    } catch (error) {
+        response.status(500).json({ message: error.message })
+    }
+}
+
+const readAllDeletedActivities=async (request, response) => {
+    try {
+        const results = await Activity.findAll({ where: {  deleted_at: { [Op.is]: null }} ,paranoid:false})
         response.status(200).json({ message: "showing all Activity success", results });
     } catch (error) {
         response.status(500).json({ message: error.message })
@@ -141,5 +150,6 @@ module.exports = {
     permanentDeleteActivity,
     deleteActivity,
     readActivityByEmployeeId,
-    readRawActivityByEmployeeId
+    readRawActivityByEmployeeId,
+    readAllDeletedActivities
 }
