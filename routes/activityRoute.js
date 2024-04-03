@@ -10,10 +10,12 @@ const {
     deleteActivity,
     readActivityByEmployeeId,
     readRawActivityByEmployeeId,
-    readAllDeletedActivities
+    readAllDeletedActivities,
+    readRawAllActivitiesByEmployeesId
 } = require('../controllers/activityController');
 
 router.get('/', readAllActivities);
+router.get('/raw/activites/all',readRawAllActivitiesByEmployeesId)
 router.get('/deleted/activities',readAllDeletedActivities)
 router.post('/create/', createActivity);
 

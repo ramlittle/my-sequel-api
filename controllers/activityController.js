@@ -1,5 +1,5 @@
 const { Activity } = require('../db.js');
-const {Sequelize, Op}=require('@sequelize/core') 
+const { Sequelize, Op } = require('@sequelize/core')
 // CREATE YOUR CRUD HERE
 
 const createActivity = async (request, response) => {
@@ -13,17 +13,34 @@ const createActivity = async (request, response) => {
 
 const readAllActivities = async (request, response) => {
     try {
-        const results = await Activity.findAll({paranoid:true})
+        //paranoid is to true to show only not archived records
+        const results = await Activity.findAll({ paranoid: true })
         response.status(200).json({ message: "showing all Activity success", results });
     } catch (error) {
         response.status(500).json({ message: error.message })
     }
 }
 
-const readAllDeletedActivities=async (request, response) => {
-    try {
-        const results = await Activity.findAll({ where: {  deleted_at: { [Op.is]: null }} ,paranoid:false})
-        response.status(200).json({ message: "showing all Activity success", results });
+const readAllDeletedActivities = async (request, response) => {
+    try {        
+        const results = await Activity.sequelize.query(`
+        SELECT 
+        activity.activity_id AS activity_id,
+        activity.activity AS activity, 
+        activity.employee_id AS employee_id,
+        employee.name AS created_by
+        FROM activity 
+        LEFT JOIN employee 
+        ON activity.employee_id = employee.employee_id
+        WHERE activity.deleted_at IS NOT NULL
+        `,
+            {
+                type: Sequelize.QueryTypes.SELECT
+            })
+        if (!results) {
+            throw new Error(`No item found`)
+        }
+        await response.status(200).json({ message: "showing one record Activity", results });
     } catch (error) {
         response.status(500).json({ message: error.message })
     }
@@ -31,49 +48,80 @@ const readAllDeletedActivities=async (request, response) => {
 
 const readActivity = async (request, response) => {
     try {
-        const {activity_id}=request.params;
-        const queryString={ where: { activity_id: activity_id } };
+        const { activity_id } = request.params;
+        const queryString = { where: { activity_id: activity_id } };
         const results = await Activity.findOne(queryString);
         if (!results) {
             throw new Error(`No item found`)
         }
-        response.status(200).json({ message: "showing one record Activity", results });        
+        response.status(200).json({ message: "showing one record Activity", results });
     } catch (error) {
         response.status(500).json({ message: error.message })
     }
 }
 
-const readActivityByEmployeeId=async (request, response) => {
+const readActivityByEmployeeId = async (request, response) => {
     try {
-        const {employee_id}=request.params;
-        const queryString={ where: { employee_id: employee_id } };
+        const { employee_id } = request.params;
+        const queryString = { where: { employee_id: employee_id } };
         const results = await Activity.findAll(queryString);
         if (!results) {
             throw new Error(`No item found`)
         }
-        response.status(200).json({ message: "showing one record Activity", results });        
+        response.status(200).json({ message: "showing one record Activity", results });
     } catch (error) {
         response.status(500).json({ message: error.message })
     }
 }
 
-const readRawActivityByEmployeeId=async (request, response) => {
+const readRawActivityByEmployeeId = async (request, response) => {
     try {
-        const {employee_id}=request.params;
+        const { employee_id } = request.params;
         const results = await Activity.sequelize.query(`
-            SELECT *
-            FROM activity
-            WHERE employee_id = :fk_employee_id;
+        SELECT 
+        activity.activity_id AS activity_id,
+        activity.activity AS activity, 
+        employee.name AS created_by 
+        FROM activity 
+        LEFT JOIN employee 
+        ON activity.employee_id = employee.employee_id
+        WHERE activity.employee_id=:fk_employee_id
         `,
-        {replacements: {
-            fk_employee_id: employee_id
-        },
-        type: Sequelize.QueryTypes.SELECT
-    }) 
+            {
+                replacements: {
+                    fk_employee_id: employee_id
+                },
+                type: Sequelize.QueryTypes.SELECT
+            })
         if (!results) {
             throw new Error(`No item found`)
         }
-        await response.status(200).json({ message: "showing one record Activity", results });        
+        await response.status(200).json({ message: "showing one record Activity", results });
+    } catch (error) {
+        response.status(500).json({ message: error.message })
+    }
+}
+
+const readRawAllActivitiesByEmployeesId = async (request, response) => {
+    try {        
+        const results = await Activity.sequelize.query(`
+        SELECT 
+        activity.activity_id AS activity_id,
+        activity.activity AS activity, 
+        activity.employee_id AS employee_id,
+        employee.name AS created_by
+        FROM activity 
+        LEFT JOIN employee 
+        ON activity.employee_id = employee.employee_id
+        WHERE activity.deleted_at IS NULL
+        `,
+            {
+                type: Sequelize.QueryTypes.SELECT
+            })
+        if (!results) {
+            throw new Error(`No item found`)
+        }
+        await response.status(200).json({ message: "showing one record Activity", results });
     } catch (error) {
         response.status(500).json({ message: error.message })
     }
@@ -82,60 +130,60 @@ const readRawActivityByEmployeeId=async (request, response) => {
 const updateActivity = async (request, response) => {
     const { activity_id } = request.params;
     const condition = {
-      where: {
-        activity_id: activity_id,
-      },
+        where: {
+            activity_id: activity_id,
+        },
     };
     const queryString = {
-      ...request.body,
-      activity_id: activity_id
+        ...request.body,
+        activity_id: activity_id
     };
-  
+
     try {
-      const results = await Activity.update(queryString, condition)
-      await response.status(200).send(results);
+        const results = await Activity.update(queryString, condition)
+        await response.status(200).send(results);
     } catch (error) {
-      response.status(500).send({ message: 'Updating failed', error: error });
+        response.status(500).send({ message: 'Updating failed', error: error });
     }
 }
 
-const deleteActivity=async (request,response)=>{
+const deleteActivity = async (request, response) => {
     try {
-        const {activity_id}=request.params;
-        const queryString={ where: { activity_id: activity_id } };
+        const { activity_id } = request.params;
+        const queryString = { where: { activity_id: activity_id } };
         const results = await Activity.destroy(queryString);
         if (!results) {
             throw new Error(`No item found`)
         }
-        response.status(200).json({ message: "deleted one record", results });        
+        response.status(200).json({ message: "deleted one record", results });
     } catch (error) {
         response.status(500).json({ message: error.message })
     }
 }
 
-const permanentDeleteActivity=async (request,response)=>{
+const permanentDeleteActivity = async (request, response) => {
     try {
-        const {activity_id}=request.params;
-        const queryString={ where: { activity_id: activity_id }, force: true };
+        const { activity_id } = request.params;
+        const queryString = { where: { activity_id: activity_id }, force: true };
         const results = await Activity.destroy(queryString);
         if (!results) {
             throw new Error(`No item found`)
         }
-        response.status(200).json({ message: "permanently deleted one record", results });        
+        response.status(200).json({ message: "permanently deleted one record", results });
     } catch (error) {
         response.status(500).json({ message: error.message })
     }
 }
 
-const restoreActivity=async (request,response)=>{
+const restoreActivity = async (request, response) => {
     try {
-        const {activity_id}=request.params;
-        const queryString={ where: { activity_id: activity_id } };
+        const { activity_id } = request.params;
+        const queryString = { where: { activity_id: activity_id } };
         const results = await Activity.restore(queryString);
         if (!results) {
             throw new Error(`No item found`)
         }
-        response.status(200).json({ message: "restored one record", results });        
+        response.status(200).json({ message: "restored one record", results });
     } catch (error) {
         response.status(500).json({ message: error.message })
     }
@@ -151,5 +199,6 @@ module.exports = {
     deleteActivity,
     readActivityByEmployeeId,
     readRawActivityByEmployeeId,
-    readAllDeletedActivities
+    readAllDeletedActivities,
+    readRawAllActivitiesByEmployeesId
 }
